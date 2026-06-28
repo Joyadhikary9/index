@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>TapCoin — Mini Game</title>
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, doc, getDoc, setDoc, collection, addDoc, getDocs, query, where, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDlBIgwv5CLcOqFyUs3x4aaTHFVUuZJe08",
+    authDomain: "mini-app-16941.firebaseapp.com",
+    projectId: "mini-app-16941",
+    storageBucket: "mini-app-16941.firebasestorage.app",
+    messagingSenderId: "804005933994",
+    appId: "1:804005933994:web:70e095d691b5406edcf1d3",
+    measurementId: "G-P60L2TDE0H"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // Make db and firebase functions globally available
+  window._db = db;
+  window._fbDoc = doc;
+  window._fbGetDoc = getDoc;
+  window._fbSetDoc = setDoc;
+  window._fbCollection = collection;
+  window._fbAddDoc = addDoc;
+  window._fbGetDocs = getDocs;
+  window._fbQuery = query;
+  window._fbWhere = where;
+  window._fbUpdateDoc = updateDoc;
+
+  // Signal that Firebase is ready
+  window._firebaseReady = true;
+  if (window._onFirebaseReady) window._onFirebaseReady();
+</script>
+<style>
+  :root{
+    --bg: #05070b;
+    --surface: #11151d;
+    --surface-2: #161b25;
+    --surface-3: #1d2330;
+    --gold: #f2c94c;
+    --gold-deep: #b8860b;
+    --green: #1fcb7c;
+    --red: #ff5c5c;
+    --text: #eef1f6;
+    --muted: #7b8497;
+    --line: rgba(255,255,255,0.06);
+    --radius: 18px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+    height: 100%;
+  }
+  #app{
+    max-width: 430px;
+    margin: 0 auto;
+    min-height: 100vh;
+    position: relative;
+    background:
+      radial-gradient(circle at 50% -10%, rgba(242,201,76,0.10), transparent 55%),
+      var(--bg);
+    overflow-x:hidden;
+    padding-bottom: 96px;
+  }
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 18px 18px 8px;
+  }
+  .uid{
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+  .uid b{ color: var(--text); font-weight:700; }
+  .vip-chip{
+    display:flex; align-items:center; gap:6px;
+    background: linear-gradient(135deg, rgba(242,201,76,0.18), rgba(242,201,76,0.04));
+    border: 1px solid rgba(242,201,76,0.35);
+    border-radius: 999px;
+    padding: 6px 12px 6px 8px;
+    font-size: 12px;
+    font-weight:700;
+    color: var(--gold);
+  }
+  .vip-chip .dot{
+    width:16px; height:16px; border-radius:50%;
+    background: conic-gradient(var(--gold), var(--gold-deep), var(--gold));
+    display:inline-block;
+  }
+  .wallet{
+    margin: 6px 18px 0;
+    padding: 28px 22px 24px;
+    border-radius: 22px;
+    background: linear-gradient(160deg, var(--surface-2), var(--surface));
+    border: 1px solid var(--line);
+    position: relative;
+    overflow: hidden;
+  }
+  .wallet::before{
+    content:"";
+    position:absolute; top:-60%; right:-30%;
+    width: 240px; height:240px;
+    background: radial-gradient(circle, rgba(242,201,76,0.16), transparent 70%);
+  }
+  .wallet-label{
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight:700;
+  }
+  .wallet-balance{
+    font-family: 'Sora', 'Manrope', sans-serif;
+    font-size: 44px;
+    font-weight: 800;
+    margin-top: 8px;
+    letter-spacing: -0.02em;
+    display:flex; align-items:baseline; gap:6px;
+  }
+  .wallet-balance span{
+    font-size: 18px;
+    color: var(--muted);
+    font-weight:700;
+  }
+  .wallet-actions{
+    display:flex; gap:10px;
+    margin-top: 20px;
+  }
+  .wallet-actions button{
+    flex:1;
+    border:none;
+    padding: 14px 0;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 800;
+    cursor:pointer;
+    letter-spacing: 0.01em;
+    transition: transform .12s ease, filter .12s ease;
+  }
+  .wallet-actions button:active{ transform: scale(0.96); }
+  .btn-deposit{
+    background: linear-gradient(135deg, var(--gold), #d9a72f);
+    color: #1a1300;
+  }
+  .btn-withdraw{
+    background: var(--surface-3);
+    color: var(--text);
+    border: 1px solid var(--line);
+  }
+  .wallet-foot{
+    display:flex; justify-content:space-between;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+  }
+  .wallet-foot .mini-stat .l{ font-size:11px; color:var(--muted); font-weight:700; }
+  .wallet-foot .mini-stat .v{ font-size:14px; font-weight:800; margin-top:3px; }
+  .wallet-foot .mini-stat{ text-align:left; }
+  .wallet-foot .mini-stat:last-child{ text-align:right; }
+  .quick-links{
+    margin: 22px 18px 0;
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .quick-card{
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 16px;
+    cursor:pointer;
+    transition: border-color .15s ease, transform .12s ease;
+  }
+  .quick-card:active{ transform: scale(0.97); }
+  .quick-card .icon{
+    width: 38px; height:38px;
+    border-radius: 10px;
+    display:flex; align-items:center; justify-content:center;
+    font-size: 18px;
+    margin-bottom: 10px;
+  }
+  .quick-card.game .icon{ background: rgba(242,201,76,0.14); color: var(--gold); }
+  .quick-card.refer .icon{ background: rgba(31,203,124,0.14); color: var(--green); }
+  .quick-card .t1{ font-size:13px; font-weight:800; }
+  .quick-card .t2{ font-size:11px; color:var(--muted); margin-top:3px; }
+  .tap-zone{
+    margin: 14px 0 6px;
+    display:flex; flex-direction:column; align-items:center;
+    position: relative;
+  }
+  .tap-rate{
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 18px;
+    text-align:center;
+  }
+  .tap-rate b{ color: var(--gold); font-weight: 800; }
+  .coin-wrap{
+    position: relative;
+    width: 220px; height: 220px;
+  }
+  .coin{
+    width: 100%; height:100%;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 32% 28%, #fff6d9, var(--gold) 38%, var(--gold-deep) 80%);
+    box-shadow:
+      0 0 0 8px rgba(242,201,76,0.08),
+      0 18px 40px rgba(242,201,76,0.25),
+      inset 0 -10px 24px rgba(0,0,0,0.25),
+      inset 0 8px 16px rgba(255,255,255,0.35);
+    display:flex; align-items:center; justify-content:center;
+    cursor: pointer;
+    user-select: none;
+    transition: transform .08s ease;
+    position: relative;
+  }
+  .coin::after{
+    content:"";
+    position:absolute; inset: 14px;
+    border-radius:50%;
+    border: 2px dashed rgba(26,19,0,0.25);
+  }
+  .coin-mark{
+    font-family:'Sora', sans-serif;
+    font-size: 52px;
+    font-weight: 800;
+    color: #1a1300;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.3);
+  }
+  .coin.pressed{ transform: scale(0.93); }
+  .progress-ring{
+    margin-top: 22px;
+    width: 100%;
+    max-width: 280px;
+  }
+  .progress-track{
+    height: 10px;
+    border-radius: 999px;
+    background: var(--surface-3);
+    overflow:hidden;
+    border: 1px solid var(--line);
+  }
+  .progress-fill{
+    height:100%;
+    width:0%;
+    background: linear-gradient(90deg, var(--gold-deep), var(--gold));
+    border-radius: 999px;
+    transition: width .15s ease;
+  }
+  .progress-caption{
+    display:flex; justify-content:space-between;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 8px;
+    padding: 0 2px;
+  }
+  .floaty{
+    position: absolute;
+    font-family:'Sora', sans-serif;
+    font-weight: 800;
+    color: var(--gold);
+    font-size: 16px;
+    pointer-events:none;
+    animation: floatUp 0.9s ease-out forwards;
+  }
+  @keyframes floatUp{
+    0%{ opacity: 1; transform: translateY(0) scale(1); }
+    100%{ opacity: 0; transform: translateY(-70px) scale(1.3); }
+  }
+  .section{
+    margin: 22px 18px 0;
+  }
+  .section-title{
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 12px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .card{
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .refer-row{
+    display:flex; align-items:center; gap:12px;
+  }
+  .refer-row .icon{
+    width: 44px; height:44px;
+    border-radius: 12px;
+    background: rgba(31,203,124,0.12);
+    color: var(--green);
+    display:flex; align-items:center; justify-content:center;
+    font-size: 20px;
+    flex-shrink:0;
+  }
+  .refer-row .grow{ flex:1; }
+  .refer-row .grow .t1{ font-weight:800; font-size:14px; }
+  .refer-row .grow .t2{ font-size: 12px; color: var(--muted); margin-top:2px; }
+  .refer-link-box{
+    display:flex; gap:8px; margin-top:14px;
+  }
+  .refer-link-box input{
+    flex:1;
+    background: var(--surface-3);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    color: var(--text);
+    font-size: 12px;
+    padding: 10px 12px;
+  }
+  .refer-link-box button{
+    background: var(--gold);
+    color: #1a1300;
+    border:none;
+    border-radius: 10px;
+    padding: 0 16px;
+    font-weight: 800;
+    font-size: 12px;
+    cursor:pointer;
+  }
+  .gift-row{
+    display:flex; gap:8px; margin-top: 12px;
+  }
+  .gift-row input{
+    flex:1;
+    background: var(--surface-3);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    color: var(--text);
+    font-size: 13px;
+    padding: 12px 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .gift-row input::placeholder{ color: var(--muted); text-transform:none; letter-spacing:0; }
+  .gift-row button{
+    background: linear-gradient(135deg, var(--green), #169c5e);
+    color: #04140c;
+    border:none;
+    border-radius: 10px;
+    padding: 0 18px;
+    font-weight: 800;
+    font-size: 13px;
+    cursor:pointer;
+  }
+  .toast{
+    position: fixed;
+    bottom: 110px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--surface-3);
+    border: 1px solid var(--line);
+    color: var(--text);
+    padding: 12px 18px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight:700;
+    z-index: 50;
+    opacity:0;
+    transition: opacity .25s ease, transform .25s ease;
+    max-width: 380px;
+    text-align:center;
+  }
+  .toast.show{ opacity:1; transform: translateX(-50%) translateY(0); }
+  .toast.success{ border-color: rgba(31,203,124,0.5); color: var(--green); }
+  .toast.error{ border-color: rgba(255,92,92,0.5); color: var(--red); }
+  .bottom-nav{
+    position: fixed;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(430px - 36px);
+    max-width: calc(100% - 36px);
+    background: rgba(17,21,29,0.92);
+    backdrop-filter: blur(14px);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    display:flex;
+    justify-content: space-between;
+    padding: 10px 6px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.45);
+    z-index: 40;
+  }
+  .nav-item{
+    flex:1;
+    display:flex; flex-direction:column; align-items:center; gap:4px;
+    padding: 6px 0;
+    border-radius: 14px;
+    cursor:pointer;
+    color: var(--muted);
+    transition: color .15s ease, background .15s ease;
+  }
+  .nav-item svg{ width:22px; height:22px; }
+  .nav-item span{ font-size: 10px; font-weight:700; }
+  .nav-item.active{ color: var(--gold); background: rgba(242,201,76,0.08); }
+  .modal-overlay{
+    position: fixed; inset:0;
+    background: rgba(0,0,0,0.6);
+    display:none;
+    align-items:flex-end;
+    justify-content:center;
+    z-index: 60;
+  }
+  .modal-overlay.show{ display:flex; }
+  .modal{
+    width: 100%;
+    max-width: 430px;
+    background: var(--surface);
+    border-top: 1px solid var(--line);
+    border-radius: 24px 24px 0 0;
+    padding: 22px 20px 28px;
+    animation: slideUp .22s ease-out;
+    max-height: 88vh;
+    overflow-y: auto;
+    position: relative;
+  }
+  @keyframes slideUp{ from{ transform: translateY(30px); opacity:0; } to{ transform:translateY(0); opacity:1; } }
+  .modal-handle{
+    width: 36px; height:4px; background: var(--surface-3);
+    border-radius: 99px; margin: 0 auto 18px;
+  }
+  .modal h3{ font-size: 17px; font-weight:800; margin-bottom: 4px; }
+  .modal p.hint{ font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+  .modal label{
+    font-size: 12px; color: var(--muted); font-weight:700; display:block; margin-bottom:6px;
+  }
+  .modal input{
+    width:100%;
+    background: var(--surface-3);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    color: var(--text);
+    font-size: 16px;
+    padding: 13px 14px;
+    margin-bottom: 14px;
+    font-family: 'Sora', sans-serif;
+  }
+  .modal .quick-amts{
+    display:flex; gap:8px; margin-bottom: 16px;
+  }
+  .modal .quick-amts button{
+    flex:1;
+    background: var(--surface-3);
+    border:1px solid var(--line);
+    color: var(--text);
+    border-radius: 10px;
+    padding: 9px 0;
+    font-size: 12px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .modal .submit-btn{
+    width:100%;
+    border:none;
+    border-radius: 14px;
+    padding: 15px 0;
+    font-size: 15px;
+    font-weight:800;
+    cursor:pointer;
+    color: #1a1300;
+    background: linear-gradient(135deg, var(--gold), #d9a72f);
+  }
+  .modal .submit-btn:disabled{ opacity: 0.5; cursor: not-allowed; }
+  .modal .close-x{
+    position:absolute; top:18px; right:18px;
+    color: var(--muted);
+    background:none; border:none; font-size:18px; cursor:pointer;
+    z-index: 5;
+  }
+  .wallet-addr-box{
+    background: var(--surface-3);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 16px;
+    text-align:center;
+  }
+  .wallet-addr-box .qr-img{
+    width: 180px; height:auto;
+    margin: 0 auto 12px;
+    border-radius: 10px;
+    display:block;
+  }
+  .wallet-addr-box .network-row{
+    display:flex; justify-content:space-between;
+    font-size: 12px;
+    padding: 8px 2px;
+    border-top: 1px solid var(--line);
+    margin-top: 4px;
+  }
+  .wallet-addr-box .network-row .l{ color: var(--muted); }
+  .wallet-addr-box .network-row .v{ font-weight: 800; }
+  .wallet-addr-box .addr-row{
+    display:flex; align-items:center; gap:8px;
+    margin-top: 8px;
+  }
+  .wallet-addr-box .addr{
+    font-family: monospace;
+    font-size: 11px;
+    color: var(--text);
+    word-break: break-all;
+    text-align:left;
+    flex:1;
+  }
+  .wallet-addr-box .copy-mini{
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--gold);
+    font-size: 11px;
+    font-weight: 800;
+    padding: 7px 10px;
+    border-radius: 8px;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+  .warn-note{
+    font-size: 11px;
+    color: var(--muted);
+    text-align:center;
+    margin-top: 8px;
+  }
+  .page{ display:none; }
+  .page.active{ display:block; }
+  .vip-list{ display:flex; flex-direction:column; gap:10px; margin-top:14px; }
+  .vip-row{
+    display:flex; align-items:center; gap:12px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 12px 14px;
+  }
+  .vip-row.locked{ opacity:0.55; }
+  .vip-row.current{
+    border-color: rgba(242,201,76,0.5);
+    background: linear-gradient(135deg, rgba(242,201,76,0.10), var(--surface));
+  }
+  .vip-badge{
+    width: 40px; height:40px;
+    border-radius: 50%;
+    background: var(--surface-3);
+    display:flex; align-items:center; justify-content:center;
+    font-weight:800;
+    font-size: 13px;
+    flex-shrink:0;
+  }
+  .vip-row.current .vip-badge, .vip-row.unlocked .vip-badge{
+    background: conic-gradient(var(--gold), var(--gold-deep), var(--gold));
+    color:#1a1300;
+  }
+  .vip-row .grow{ flex:1; }
+  .vip-row .grow .name{ font-size:13px; font-weight:800; }
+  .vip-row .grow .need{ font-size:11px; color:var(--muted); margin-top:2px; }
+  .vip-row .bonus{ font-size:12px; font-weight:800; color: var(--green); text-align:right; }
+  .profile-head{
+    display:flex; align-items:center; gap:14px;
+    padding: 8px 0 6px;
+  }
+  .avatar{
+    width: 58px; height:58px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold), var(--gold-deep));
+    display:flex; align-items:center; justify-content:center;
+    font-weight:800; font-size:20px; color:#1a1300;
+  }
+  .profile-head .name{ font-size:16px; font-weight:800; }
+  .profile-head .id{ font-size:12px; color:var(--muted); margin-top:2px; }
+  .stat-grid{
+    display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:18px;
+  }
+  .stat-box{
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px;
+  }
+  .stat-box .v{ font-family:'Sora',sans-serif; font-size:19px; font-weight:800; }
+  .stat-box .l{ font-size:11px; color:var(--muted); margin-top:4px; }
+  .req-list{ display:flex; flex-direction:column; gap:8px; margin-top:14px; }
+  .req-row{
+    display:flex; align-items:center; justify-content:space-between;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+  .req-row .l1{ font-size:13px; font-weight:800; }
+  .req-row .l2{ font-size:11px; color:var(--muted); margin-top:2px; }
+  .pill{
+    font-size: 10px; font-weight:800;
+    padding: 4px 9px; border-radius:99px;
+    flex-shrink:0;
+  }
+  .pill.pending{ background: rgba(242,201,76,0.14); color: var(--gold); }
+  .pill.approved{ background: rgba(31,203,124,0.14); color: var(--green); }
+  .pill.rejected{ background: rgba(255,92,92,0.14); color: var(--red); }
+  .empty-hint{
+    text-align:center; color: var(--muted); font-size:12px; padding: 18px 0;
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- HOME PAGE -->
+  <div class="page active" id="page-home">
+    <div class="topbar">
+      <div class="uid">ID: <b id="uidShow">লোড হচ্ছে...</b></div>
+      <div class="vip-chip"><span class="dot"></span> <span id="vipChipText">Prime 0</span></div>
+    </div>
+
+    <div class="wallet">
+      <div class="wallet-label">Wallet Balance</div>
+      <div class="wallet-balance">$<span id="balanceMain">0.00</span><span>USD</span></div>
+      <div class="wallet-actions">
+        <button class="btn-deposit" onclick="openModal('depositModal')">Deposit</button>
+        <button class="btn-withdraw" onclick="openModal('withdrawModal')">Withdraw</button>
+      </div>
+      <div class="wallet-foot">
+        <div class="mini-stat">
+          <div class="l">টোটাল ডিপোজিট</div>
+          <div class="v" id="homeDeposited">$0.00</div>
+        </div>
+        <div class="mini-stat">
+          <div class="l">পেন্ডিং রিকোয়েস্ট</div>
+          <div class="v" id="homePending">0</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="quick-links">
+      <div class="quick-card game" onclick="switchPage('game')">
+        <div class="icon">🎮</div>
+        <div class="t1">মিনি গেম খেলো</div>
+        <div class="t2">ক্লিক করে ডলার আয় করো</div>
+      </div>
+      <div class="quick-card refer" onclick="switchPage('refer')">
+        <div class="icon">👥</div>
+        <div class="t1">রেফার করো</div>
+        <div class="t2">$0.40 প্রতি রেফারে</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">গিফট কোড</div>
+      <div class="card">
+        <div class="gift-row">
+          <input type="text" id="giftInput" placeholder="কোড লিখো">
+          <button onclick="claimGift(false)">ক্লেইম</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">তোমার রিকোয়েস্ট</div>
+      <div class="req-list" id="homeReqList"></div>
+    </div>
+  </div>
+
+  <!-- GAME PAGE -->
+  <div class="page" id="page-game">
+    <div class="topbar">
+      <div class="uid">গেম জোন</div>
+      <div class="vip-chip"><span class="dot"></span> <span id="vipChipText2">Prime 0</span></div>
+    </div>
+    <div class="tap-zone" style="margin-top:10px;">
+      <div class="tap-rate">৫০০ ক্লিকে <b>$0.01</b> জমা হবে</div>
+      <div class="coin-wrap">
+        <div class="coin" id="coinBtn2" onclick="handleTap(event)">
+          <div class="coin-mark">$</div>
+        </div>
+      </div>
+      <div class="progress-ring">
+        <div class="progress-track"><div class="progress-fill" id="progressFill2"></div></div>
+        <div class="progress-caption">
+          <span id="clickCountLabel2">0 / 500 ক্লিক</span>
+          <span id="totalEarnedLabel2">আজকে আয়: $0.00</span>
+        </div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="card" style="text-align:center;">
+        <div class="t1" style="font-weight:800; margin-bottom:6px;">কয়েন বাটনে চাপ দাও</div>
+        <div class="t2" style="font-size:12px; color:var(--muted);">প্রতি ৫০০ চাপে তোমার ওয়ালেটে $0.01 যোগ হবে। যত খুশি চাপ দিতে পারো!</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROFILE PAGE -->
+  <div class="page" id="page-profile">
+    <div class="topbar"><div class="uid">প্রোফাইল</div><div></div></div>
+    <div class="section" style="margin-top:0;">
+      <div class="profile-head">
+        <div class="avatar">P</div>
+        <div>
+          <div class="name">Player</div>
+          <div class="id">ID: <span id="uidShow2">লোড হচ্ছে...</span></div>
+        </div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="v" id="profBalance">$0.00</div><div class="l">ওয়ালেট ব্যালেন্স</div></div>
+        <div class="stat-box"><div class="v" id="profDeposited">$0.00</div><div class="l">টোটাল ডিপোজিট</div></div>
+        <div class="stat-box"><div class="v" id="profRefs">0</div><div class="l">রেফার সংখ্যা</div></div>
+        <div class="stat-box"><div class="v" id="profVip">Prime 0</div><div class="l">ভিআইপি লেভেল</div></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">ভিআইপি লেভেল</div>
+      <div class="vip-list" id="vipList"></div>
+    </div>
+  </div>
+
+  <!-- REFER PAGE -->
+  <div class="page" id="page-refer">
+    <div class="topbar"><div class="uid">রেফার সিস্টেম</div><div></div></div>
+    <div class="section" style="margin-top:0;">
+      <div class="card">
+        <div class="refer-row">
+          <div class="icon">💸</div>
+          <div class="grow">
+            <div class="t1">প্রতি রেফারে $0.40</div>
+            <div class="t2">তোমার লিংক থেকে কেউ জয়েন করলেই বোনাস যুক্ত হবে</div>
+          </div>
+        </div>
+        <div class="refer-link-box">
+          <input type="text" id="referLink" readonly value="https://t.me/TapCoinBot?start=...">
+          <button onclick="copyRefer()">কপি</button>
+        </div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="stat-grid">
+        <div class="stat-box"><div class="v" id="referCount">0</div><div class="l">টোটাল রেফার</div></div>
+        <div class="stat-box"><div class="v" id="referEarned">$0.00</div><div class="l">রেফার থেকে আয়</div></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">গিফট কোড ক্লেইম</div>
+      <div class="card">
+        <div class="gift-row">
+          <input type="text" id="giftInput2" placeholder="কোড লিখো">
+          <button onclick="claimGift(true)">ক্লেইম</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <div class="nav-item active" data-page="home" onclick="switchPage('home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7"/><path d="M5 10v9a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1v-9"/></svg>
+      <span>হোম</span>
+    </div>
+    <div class="nav-item" data-page="game" onclick="switchPage('game')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="12" rx="4"/><circle cx="8" cy="13" r="1.6"/><circle cx="16" cy="13" r="1.6"/></svg>
+      <span>গেম</span>
+    </div>
+    <div class="nav-item" data-page="profile" onclick="switchPage('profile')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+      <span>প্রোফাইল</span>
+    </div>
+    <div class="nav-item" data-page="refer" onclick="switchPage('refer')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="8" r="3" opacity="0.6"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5"/></svg>
+      <span>রেফার</span>
+    </div>
+  </div>
+
+  <!-- DEPOSIT MODAL -->
+  <div class="modal-overlay" id="depositModal">
+    <div class="modal">
+      <button class="close-x" onclick="closeModal('depositModal')">✕</button>
+      <div class="modal-handle"></div>
+      <h3>ডিপোজিট করো</h3>
+      <p class="hint">সর্বনিম্ন $10 — সর্বোচ্চ $5,000</p>
+      <div class="wallet-addr-box">
+        <img class="qr-img" id="qrImage" alt="Deposit QR" src="">
+        <div class="network-row">
+          <span class="l">Network</span>
+          <span class="v">BNB Smart Chain (BEP20)</span>
+        </div>
+        <div class="addr-row">
+          <span class="addr" id="depositAddr">0xac6b5b0695a6d509b9285e8f016488d3c486a29a</span>
+          <button class="copy-mini" onclick="copyAddress()">কপি</button>
+        </div>
+      </div>
+      <div class="warn-note">শুধু BNB Smart Chain (BEP20) নেটওয়ার্কে পাঠাও।</div>
+      <label style="margin-top:16px; display:block;">তুমি কত ডলার পাঠিয়েছো?</label>
+      <input type="number" id="depositAmt" placeholder="যেমন 50">
+      <div class="quick-amts">
+        <button onclick="setAmt('depositAmt',10)">$10</button>
+        <button onclick="setAmt('depositAmt',100)">$100</button>
+        <button onclick="setAmt('depositAmt',650)">$650</button>
+        <button onclick="setAmt('depositAmt',1000)">$1000</button>
+      </div>
+      <button class="submit-btn" id="depositSubmitBtn" onclick="submitDeposit()">রিকোয়েস্ট পাঠাও</button>
+    </div>
+  </div>
+
+  <!-- WITHDRAW MODAL -->
+  <div class="modal-overlay" id="withdrawModal">
+    <div class="modal">
+      <button class="close-x" onclick="closeModal('withdrawModal')">✕</button>
+      <div class="modal-handle"></div>
+      <h3>উইথড্রও করো</h3>
+      <p class="hint">সর্বনিম্ন $200 — সর্বোচ্চ $5,000</p>
+      <label>ওয়ালেট অ্যাড্রেস (BEP20)</label>
+      <input type="text" id="withdrawAddr" placeholder="তোমার BNB Smart Chain অ্যাড্রেস">
+      <label>পরিমাণ (USD)</label>
+      <input type="number" id="withdrawAmt" placeholder="যেমন 200">
+      <div class="quick-amts">
+        <button onclick="setAmt('withdrawAmt',200)">$200</button>
+        <button onclick="setAmt('withdrawAmt',500)">$500</button>
+        <button onclick="setAmt('withdrawAmt',1500)">$1500</button>
+        <button onclick="setAmt('withdrawAmt',5000)">$5000</button>
+      </div>
+      <button class="submit-btn" id="withdrawSubmitBtn" onclick="submitWithdraw()">রিকোয়েস্ট পাঠাও</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const VIP_LEVELS = [
+  {level:0, name:"Prime 0", need:0, bonus:0},
+  {level:1, name:"Prime 1", need:100, bonus:4},
+  {level:2, name:"Prime 2", need:350, bonus:8},
+  {level:3, name:"Prime 3", need:650, bonus:16},
+  {level:4, name:"Prime 4", need:1000, bonus:32},
+  {level:5, name:"Prime 5", need:1200, bonus:64},
+  {level:6, name:"Prime 6", need:2000, bonus:128},
+  {level:7, name:"Prime 7", need:2500, bonus:256},
+  {level:8, name:"Prime 8", need:3000, bonus:1024},
+  {level:9, name:"Prime 9", need:4000, bonus:2057},
+  {level:10, name:"Prime 10", need:5000, bonus:4000},
+];
+
+const DEPOSIT_ADDRESS = "0xac6b5b0695a6d509b9285e8f016488d3c486a29a";
+const GIFT_FALLBACK_CODES = { "WELCOME5": 5, "TAP10": 10, "BONUS25": 25 };
+
+let uid = null;
+let state = {
+  balance: 0, deposited: 0, refers: 0, referEarned: 0,
+  vip: 0, status: "active", clickCount: 0, earnedToday: 0, pendingWithdraw: 0,
+};
+
+// ===================== FIREBASE HELPERS =====================
+async function waitForFirebase() {
+  if (window._firebaseReady) return;
+  return new Promise(resolve => { window._onFirebaseReady = resolve; });
+}
+
+async function fbGetDoc(path) {
+  await waitForFirebase();
+  const ref = window._fbDoc(window._db, ...path.split('/').reduce((acc, _, i, arr) => {
+    if (i % 2 === 0) return [...acc, arr[i]];
+    return acc;
+  }, []).reduce((acc, col, i, arr) => {
+    const id = path.split('/')[i * 2 + 1];
+    return id ? [...acc, col, id] : acc;
+  }, []));
+  const snap = await window._fbGetDoc(ref);
+  return snap.exists() ? snap.data() : null;
+}
+
+// Simpler approach using direct path parsing
+async function getDocument(collection, docId) {
+  await waitForFirebase();
+  const ref = window._fbDoc(window._db, collection, docId);
+  const snap = await window._fbGetDoc(ref);
+  return snap.exists() ? snap.data() : null;
+}
+
+async function setDocument(collection, docId, data) {
+  await waitForFirebase();
+  const ref = window._fbDoc(window._db, collection, docId);
+  await window._fbSetDoc(ref, data);
+}
+
+async function getCollection(col) {
+  await waitForFirebase();
+  const ref = window._fbCollection(window._db, col);
+  const snap = await window._fbGetDocs(ref);
+  return snap.docs.map(d => ({id: d.id, ...d.data()}));
+}
+
+// ===================== IDENTITY =====================
+async function initIdentity() {
+  // Use localStorage for UID (device-local, not shared)
+  let stored = localStorage.getItem('tapcoin_uid');
+  if (stored) {
+    uid = stored;
+  } else {
+    uid = String(Math.floor(10000000 + Math.random()*89999999));
+    localStorage.setItem('tapcoin_uid', uid);
+  }
+  document.getElementById('uidShow').textContent = uid;
+  document.getElementById('uidShow2').textContent = uid;
+  document.getElementById('referLink').value = `https://t.me/TapCoinBot?start=${uid}`;
+
+  // Register user ID in Firestore
+  try {
+    const userIds = await getDocument('meta', 'all_user_ids');
+    const ids = userIds ? (userIds.ids || []) : [];
+    if (!ids.includes(uid)) {
+      ids.push(uid);
+      await setDocument('meta', 'all_user_ids', { ids });
+    }
+  } catch(e) {}
+}
+
+async function loadUserState() {
+  try {
+    const saved = await getDocument('users', uid);
+    if (saved) {
+      state = Object.assign(state, saved);
+    } else {
+      await saveUserState();
+    }
+  } catch(e) {
+    await saveUserState();
+  }
+}
+
+async function saveUserState() {
+  try {
+    await setDocument('users', uid, state);
+  } catch(e) {
+    showToast('সেভ করতে সমস্যা হয়েছে', 'error');
+  }
+}
+
+// ===================== NAVIGATION =====================
+function switchPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === name));
+  if (name === 'home') renderHomeRequests();
+}
+
+// ===================== TAP GAME =====================
+function handleTap(e) {
+  if (state.status === 'blocked') {
+    showToast('তোমার অ্যাকাউন্ট ব্লক করা আছে', 'error');
+    return;
+  }
+  state.clickCount++;
+  if (state.clickCount % 500 === 0) {
+    state.balance += 0.01;
+    state.earnedToday += 0.01;
+    saveUserState();
+    renderBalance();
+  }
+  spawnFloaty(e);
+  pressCoin();
+  renderProgress();
+}
+
+function pressCoin() {
+  const coin = document.getElementById('coinBtn2');
+  coin.classList.add('pressed');
+  setTimeout(() => coin.classList.remove('pressed'), 90);
+}
+
+function spawnFloaty(e) {
+  if (state.clickCount % 500 !== 0) return;
+  const wrap = e.currentTarget.parentElement;
+  const f = document.createElement('div');
+  f.className = 'floaty';
+  f.textContent = '+$0.01';
+  f.style.left = '50%';
+  f.style.top = '40%';
+  f.style.transform = 'translateX(-50%)';
+  wrap.appendChild(f);
+  setTimeout(() => f.remove(), 900);
+}
+
+function renderProgress() {
+  const within = state.clickCount % 500;
+  const pct = (within / 500) * 100;
+  document.getElementById('progressFill2').style.width = pct + '%';
+  document.getElementById('clickCountLabel2').textContent = `${within} / 500 ক্লিক`;
+  document.getElementById('totalEarnedLabel2').textContent = `আজকে আয়: $${state.earnedToday.toFixed(2)}`;
+}
+
+// ===================== BALANCE =====================
+function renderBalance() {
+  document.getElementById('balanceMain').textContent = state.balance.toFixed(2);
+  document.getElementById('profBalance').textContent = '$' + state.balance.toFixed(2);
+  document.getElementById('profDeposited').textContent = '$' + state.deposited.toFixed(2);
+  document.getElementById('homeDeposited').textContent = '$' + state.deposited.toFixed(2);
+}
+
+// ===================== MODALS =====================
+function openModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+function setAmt(inputId, val) { document.getElementById(inputId).value = val; }
+
+function copyAddress() {
+  navigator.clipboard?.writeText(DEPOSIT_ADDRESS);
+  showToast('ওয়ালেট অ্যাড্রেস কপি হয়েছে', 'success');
+}
+
+async function submitDeposit() {
+  const btn = document.getElementById('depositSubmitBtn');
+  const amt = parseFloat(document.getElementById('depositAmt').value);
+  if (!amt || amt < 10 || amt > 5000) {
+    showToast('ডিপোজিট হবে $10 থেকে $5000 এর মধ্যে', 'error');
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'পাঠানো হচ্ছে...';
+  try {
+    const reqId = 'd_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+    await setDocument('deposit_requests', reqId, {
+      id: reqId, uid, amount: amt,
+      time: new Date().toISOString(), status: 'pending'
+    });
+    showToast(`ডিপোজিট রিকোয়েস্ট পাঠানো হয়েছে — $${amt.toFixed(2)}`, 'success');
+    closeModal('depositModal');
+    document.getElementById('depositAmt').value = '';
+    await renderHomeRequests();
+  } catch(e) {
+    showToast('রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'রিকোয়েস্ট পাঠাও';
+  }
+}
+
+async function submitWithdraw() {
+  const btn = document.getElementById('withdrawSubmitBtn');
+  const addr = document.getElementById('withdrawAddr').value.trim();
+  const amt = parseFloat(document.getElementById('withdrawAmt').value);
+  if (!addr) { showToast('ওয়ালেট অ্যাড্রেস দাও', 'error'); return; }
+  if (!amt || amt < 200 || amt > 5000) {
+    showToast('উইথড্র হবে $200 থেকে $5000 এর মধ্যে', 'error');
+    return;
+  }
+  const available = state.balance - (state.pendingWithdraw || 0);
+  if (amt > available) {
+    showToast('তোমার ব্যালেন্সে এত ডলার নেই', 'error');
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'পাঠানো হচ্ছে...';
+  try {
+    const reqId = 'w_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+    await setDocument('withdraw_requests', reqId, {
+      id: reqId, uid, amount: amt, addr,
+      time: new Date().toISOString(), status: 'pending'
+    });
+    state.pendingWithdraw = (state.pendingWithdraw || 0) + amt;
+    await saveUserState();
+    showToast(`উইথড্র রিকোয়েস্ট পাঠানো হয়েছে — $${amt.toFixed(2)}`, 'success');
+    closeModal('withdrawModal');
+    document.getElementById('withdrawAmt').value = '';
+    document.getElementById('withdrawAddr').value = '';
+    renderBalance();
+    await renderHomeRequests();
+  } catch(e) {
+    showToast('রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'রিকোয়েস্ট পাঠাও';
+  }
+}
+
+// ===================== HOME REQUESTS =====================
+async function renderHomeRequests() {
+  const list = document.getElementById('homeReqList');
+  let deps = [], wds = [];
+  try {
+    const allDeps = await getCollection('deposit_requests');
+    deps = allDeps.filter(d => d.uid === uid);
+  } catch(e) {}
+  try {
+    const allWds = await getCollection('withdraw_requests');
+    wds = allWds.filter(w => w.uid === uid);
+  } catch(e) {}
+
+  const mine = [
+    ...deps.map(d => ({...d, type:'deposit'})),
+    ...wds.map(w => ({...w, type:'withdraw'}))
+  ].sort((a,b) => new Date(b.time) - new Date(a.time));
+
+  // Recalculate pending withdraw
+  const pendingWdAmt = wds.filter(w => w.status === 'pending').reduce((s,w) => s + w.amount, 0);
+  if (state.pendingWithdraw !== pendingWdAmt) {
+    state.pendingWithdraw = pendingWdAmt;
+    await saveUserState();
+  }
+
+  const pendingCount = mine.filter(r => r.status === 'pending').length;
+  document.getElementById('homePending').textContent = pendingCount;
+
+  if (mine.length === 0) {
+    list.innerHTML = '<div class="empty-hint">এখনো কোনো রিকোয়েস্ট নেই</div>';
+    return;
+  }
+  list.innerHTML = mine.slice(0,8).map(r => `
+    <div class="req-row">
+      <div>
+        <div class="l1">${r.type === 'deposit' ? 'ডিপোজিট' : 'উইথড্র'} — $${r.amount.toFixed(2)}</div>
+        <div class="l2">${new Date(r.time).toLocaleString('bn-BD', {dateStyle:'medium', timeStyle:'short'})}</div>
+      </div>
+      <span class="pill ${r.status}">${r.status === 'pending' ? 'পেন্ডিং' : r.status === 'approved' ? 'অ্যাপ্রুভড' : 'রিজেক্টেড'}</span>
+    </div>
+  `).join('');
+}
+
+// ===================== GIFT CODE =====================
+async function claimGift(fromRefer) {
+  const input = document.getElementById(fromRefer ? 'giftInput2' : 'giftInput');
+  const code = input.value.trim().toUpperCase();
+  if (!code) { showToast('একটা কোড লিখো', 'error'); return; }
+
+  // Check if user already used this code
+  try {
+    const usedDoc = await getDocument('used_gift_codes', uid);
+    const used = usedDoc ? (usedDoc.codes || []) : [];
+    if (used.includes(code)) { showToast('এই কোড আগেই ব্যবহার হয়েছে', 'error'); return; }
+
+    // Check gift codes
+    const codeDoc = await getDocument('gift_codes', code);
+    let match = codeDoc;
+    if (!match && GIFT_FALLBACK_CODES[code] !== undefined) {
+      match = { code, amount: GIFT_FALLBACK_CODES[code] };
+    }
+    if (!match) { showToast('ভুল কোড অথবা মেয়াদ শেষ', 'error'); return; }
+
+    state.balance += match.amount;
+    await saveUserState();
+    used.push(code);
+    await setDocument('used_gift_codes', uid, { codes: used });
+    showToast(`কোড সফল! $${match.amount.toFixed(2)} যুক্ত হয়েছে`, 'success');
+    input.value = '';
+    renderBalance();
+  } catch(e) {
+    showToast('সমস্যা হয়েছে, আবার চেষ্টা করো', 'error');
+  }
+}
+
+// ===================== REFER =====================
+function copyRefer() {
+  const link = document.getElementById('referLink');
+  navigator.clipboard?.writeText(link.value);
+  showToast('রেফার লিংক কপি হয়েছে', 'success');
+}
+
+// ===================== VIP =====================
+function renderVipList() {
+  const list = document.getElementById('vipList');
+  list.innerHTML = '';
+  VIP_LEVELS.forEach(v => {
+    const unlocked = state.deposited >= v.need;
+    const isCurrent = v.level === state.vip;
+    const row = document.createElement('div');
+    row.className = 'vip-row ' + (isCurrent ? 'current' : (unlocked ? 'unlocked' : 'locked'));
+    row.innerHTML = `
+      <div class="vip-badge">${v.level}</div>
+      <div class="grow">
+        <div class="name">${v.name}</div>
+        <div class="need">${v.need === 0 ? 'স্টার্টিং লেভেল' : '$' + v.need + ' ডিপোজিট প্রয়োজন'}</div>
+      </div>
+      <div class="bonus">${v.bonus > 0 ? '+$' + v.bonus : '—'}</div>
+    `;
+    list.appendChild(row);
+  });
+}
+
+function updateVipChip() {
+  const v = VIP_LEVELS[state.vip] || VIP_LEVELS[0];
+  document.getElementById('vipChipText').textContent = v.name;
+  document.getElementById('vipChipText2').textContent = v.name;
+  document.getElementById('profVip').textContent = v.name;
+}
+
+// ===================== INIT =====================
+async function init() {
+  await waitForFirebase();
+  await initIdentity();
+  await loadUserState();
+  document.getElementById('profRefs').textContent = state.refers;
+  document.getElementById('referCount').textContent = state.refers;
+  document.getElementById('referEarned').textContent = '$' + state.referEarned.toFixed(2);
+  renderBalance();
+  renderProgress();
+  renderVipList();
+  updateVipChip();
+  await renderHomeRequests();
+
+  // Auto-refresh every 6 seconds
+  setInterval(async () => {
+    await loadUserState();
+    renderBalance();
+    renderVipList();
+    updateVipChip();
+    await renderHomeRequests();
+  }, 6000);
+}
+init();
+
+// ===================== TOAST =====================
+let toastTimer;
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (type || '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+</script>
+</body>
+</html>
